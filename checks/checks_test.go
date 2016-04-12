@@ -67,15 +67,15 @@ func testFileContains(t *testing.T, checker Checker) {
 		result, err := checker.FileContains(args.path, args.substr)
 		if args.hasErr {
 			if err == nil {
-				t.Errorf(errMsg, "NativeCheck", argsConcat)
+				t.Errorf(errMsg, "FileContains", argsConcat)
 			}
 		} else {
 			if err != nil {
-				t.Errorf(notErrMsg, "NativeCheck", argsConcat, err)
+				t.Errorf(notErrMsg, "FileContains", argsConcat, err)
 			}
 		}
 		if result != args.result {
-			t.Errorf(notOkMsg, "NativeCheck", argsConcat, args.result, result)
+			t.Errorf(notOkMsg, "FileContains", argsConcat, args.result, result)
 		}
 	}
 
