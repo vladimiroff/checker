@@ -51,7 +51,7 @@ func TestLocalCheckInvalidCalls(t *testing.T) {
 		})
 
 		if err == nil {
-			t.Errorf(noErrorMsg, arg[0], arg[1:], err.Error())
+			t.Errorf(noErrorMsg, arg[0], arg[1:len(arg)])
 		}
 	}
 }
