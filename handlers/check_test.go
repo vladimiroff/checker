@@ -39,7 +39,6 @@ func TestLocalCheckInvalidCalls(t *testing.T) {
 	args := [][]interface{}{
 		[]interface{}{"too", "much", "arguments"},
 		[]interface{}{"native", "this is not a map"},
-		[]interface{}{"native", map[string]string{"this": "is not a CheckRequest"}},
 	}
 
 	for _, arg := range args {
