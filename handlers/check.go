@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/koding/kite"
+	"github.com/koding/kite/dnode"
 
 	"github.com/vladimiroff/checker/checks"
 )
@@ -38,6 +39,7 @@ type CheckResult struct {
 //
 // - JSON object with list of objects, unmarshable to map[string]CheckRequest.
 func LocalCheck(request *kite.Request) (interface{}, error) {
+
 	args, err := request.Args.SliceOfLength(2)
 	if err != nil {
 		return nil, err
@@ -59,17 +61,27 @@ func LocalCheck(request *kite.Request) (interface{}, error) {
 	}
 
 	result := make(map[string]CheckResult)
+	resultChans := make(map[string]chan *CheckResult)
 
-	// TODO: Parallelize this.
 	for name, rawCheckRequest := range rawCheckRequests {
-		var checkRequest = &CheckRequest{}
 
-		if err := rawCheckRequest.Unmarshal(checkRequest); err != nil {
-			return nil, err
-		}
+		resultChans[name] = make(chan *CheckResult)
 
-		checkResult, checkError := check(checker, checkRequest)
-		result[name] = CheckResult{Result: checkResult, Error: checkError}
+		go func(checker checks.Checker, raw *dnode.Partial, ch chan *CheckResult) {
+			var request = &CheckRequest{}
+
+			if err := raw.Unmarshal(request); err != nil {
+				ch <- &CheckResult{Result: false, Error: err}
+				return
+			}
+
+			checkResult, checkError := check(checker, request)
+			ch <- &CheckResult{Result: checkResult, Error: checkError}
+		}(checker, rawCheckRequest, resultChans[name])
+	}
+
+	for name, ch := range resultChans {
+		result[name] = *<-ch
 	}
 
 	return result, nil
