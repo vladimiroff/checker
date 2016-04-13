@@ -1,3 +1,5 @@
+// Package checks defines a Checker and several implementations of it for
+// performing system checks regardless of how are they being used.
 package checks
 
 // Checker defines all allowed checks.
