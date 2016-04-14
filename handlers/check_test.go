@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/koding/cache"
 	"github.com/koding/kite"
 	"github.com/koding/kite/dnode"
 
@@ -46,7 +47,9 @@ func TestLocalCheckInvalidCalls(t *testing.T) {
 		rawArgs, _ := json.Marshal(arg)
 
 		_, err := LocalCheck(&kite.Request{
-			Args: &dnode.Partial{Raw: rawArgs},
+			Args:      &dnode.Partial{Raw: rawArgs},
+			LocalKite: kite.New("test", "0.0.0"),
+			Context:   cache.NewLRU(2),
 		})
 
 		if err == nil {
@@ -115,7 +118,9 @@ func TestLocalCheck(t *testing.T) {
 		rawArgs, _ := json.Marshal([]interface{}{arg.checker, checks})
 
 		rawResult, err := LocalCheck(&kite.Request{
-			Args: &dnode.Partial{Raw: rawArgs},
+			Args:      &dnode.Partial{Raw: rawArgs},
+			LocalKite: kite.New("test", "0.0.0"),
+			Context:   cache.NewLRU(2),
 		})
 
 		if arg.hasError && err == nil {

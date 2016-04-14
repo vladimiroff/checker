@@ -40,10 +40,9 @@ type CheckResult struct {
 //
 // - JSON object with list of objects, unmarshable to map[string]CheckRequest.
 func LocalCheck(request *kite.Request) (interface{}, error) {
-
 	args, err := request.Args.SliceOfLength(2)
 	if err != nil {
-		return nil, err
+		return logAndFail(request, err)
 	}
 
 	// No need to check here if the first arguments is a valid string, because
@@ -53,15 +52,15 @@ func LocalCheck(request *kite.Request) (interface{}, error) {
 
 	checker, ok := checkers[checkerName]
 	if !ok {
-		return nil, NoSuchChecker
+		return logAndFail(request, NoSuchChecker)
 	}
 
 	rawCheckRequests, err := rawChecks.Map()
 	if err != nil {
-		return nil, err
+		return logAndFail(request, err)
 	}
 
-	result := make(map[string]CheckResult)
+	response := make(map[string]CheckResult)
 	resultChans := make(map[string]chan *CheckResult)
 
 	for name, rawCheckRequest := range rawCheckRequests {
@@ -82,12 +81,14 @@ func LocalCheck(request *kite.Request) (interface{}, error) {
 	}
 
 	for name, ch := range resultChans {
-		result[name] = *<-ch
+		response[name] = *<-ch
 	}
 
-	return result, nil
+	request.Context.Set("response", response)
+	return response, nil
 }
 
+// check performs the given check request against a checker.
 func check(checker checks.Checker, checkRequest *CheckRequest) (bool, error) {
 	switch checkRequest.Type {
 	case "file_exists":
