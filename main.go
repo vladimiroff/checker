@@ -1,7 +1,10 @@
 package main
 
 import (
+	_ "expvar"
 	"fmt"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -10,6 +13,8 @@ import (
 
 	"github.com/vladimiroff/checker/handlers"
 )
+
+var expvarHost = "localhost:8123"
 
 func main() {
 	hostname, err := os.Hostname()
@@ -25,6 +30,15 @@ func main() {
 
 	go k.Run()
 	<-k.ServerReadyNotify()
+
+	sock, err := net.Listen("tcp", expvarHost)
+	if err != nil {
+		k.Log.Fatal("Registered expvar on %s failed with \"%s\"", expvarHost, err)
+	}
+	go func() {
+		k.Log.Info("Registered expvar on %s", expvarHost)
+		http.Serve(sock, nil)
+	}()
 
 	if _, err := k.Register(&url.URL{
 		Scheme: "http",
