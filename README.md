@@ -60,7 +60,7 @@ func check(host string) {
 		},
 	}
 
-	response, err := investigateWorker.Tell("check", "native", checks)
+	response, err := investigateWorker.Tell("local_check", "native", checks)
 	if err != nil {
 		k.Log.Fatal("err: %s\n", err)
 	}

@@ -25,7 +25,7 @@ func main() {
 	k := kite.New(fmt.Sprintf("%s.checker", hostname), "1.0.0")
 	k.PreHandleFunc(handlers.LogRequest)
 	k.PostHandleFunc(handlers.LogResponse)
-	k.HandleFunc("check", handlers.LocalCheck)
+	k.HandleFunc("local_check", handlers.LocalCheck)
 	k.HandleFunc("checkers", handlers.Checkers)
 
 	go k.Run()
