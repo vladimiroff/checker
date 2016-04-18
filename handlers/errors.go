@@ -16,3 +16,7 @@ const NoSuchChecker = Error("no such checker")
 // NoSuchCheckType is used when the Type value of a check request is not among
 // supported.
 const NoSuchCheckType = Error("no such check type")
+
+// InvalidRemoteResponse is used when a result from remote check can't be
+// unmarshalled to a boolean value.
+const InvalidRemoteResponse = Error("error check gave invalid response")
