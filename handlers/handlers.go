@@ -26,8 +26,8 @@ func NewKite(hostname string) *kite.Kite {
 	k := kite.New(fmt.Sprintf("%s.checker", hostname), "1.0.0")
 	k.PreHandleFunc(LogRequest)
 	k.PostHandleFunc(LogResponse)
-	k.HandleFunc("local_check", LocalCheck)
-	k.HandleFunc("checkers", Checkers)
+	k.HandleFunc("local_check", LocalCheck).DisableAuthentication()
+	k.HandleFunc("checkers", Checkers).DisableAuthentication()
 
 	return k
 }
