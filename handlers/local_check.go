@@ -1,4 +1,3 @@
-// Package handlers defines kite handlers for performing system checks.
 package handlers
 
 import (

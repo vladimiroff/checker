@@ -6,10 +6,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-
-	"github.com/koding/kite"
-	"github.com/koding/logging"
 
 	"github.com/vladimiroff/checker/handlers"
 )
@@ -17,16 +13,7 @@ import (
 var expvarHost = "localhost:8123"
 
 func main() {
-	hostname, err := os.Hostname()
-	if err != nil {
-		logging.Fatal("os.Hostname() failed: %s", err.Error())
-	}
-
-	k := kite.New(fmt.Sprintf("%s.checker", hostname), "1.0.0")
-	k.PreHandleFunc(handlers.LogRequest)
-	k.PostHandleFunc(handlers.LogResponse)
-	k.HandleFunc("local_check", handlers.LocalCheck)
-	k.HandleFunc("checkers", handlers.Checkers)
+	k := handlers.Instance
 
 	go k.Run()
 	<-k.ServerReadyNotify()
