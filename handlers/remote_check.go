@@ -8,10 +8,11 @@ import (
 	"github.com/koding/kite/dnode"
 )
 
-type remoteResult struct {
-	addr   string
-	result *dnode.Partial
-	err    error
+// RemoteCheckResult defines a check result returned from another kite.
+type RemoteCheckResult struct {
+	Address string
+	Results map[string]CheckResult
+	Error   error
 }
 
 // RemoteCheck takes a slice of machine addresses, checker and a check requests
@@ -19,8 +20,8 @@ type remoteResult struct {
 func RemoteCheck(request *kite.Request) (interface{}, error) {
 	var (
 		wg         sync.WaitGroup
-		resultChan = make(chan remoteResult)
-		response   = make(map[string]*dnode.Partial)
+		resultChan = make(chan RemoteCheckResult)
+		response   = make(map[string]RemoteCheckResult)
 	)
 
 	args, err := request.Args.SliceOfLength(3)
@@ -45,13 +46,18 @@ func RemoteCheck(request *kite.Request) (interface{}, error) {
 
 	// dialCheck is dialing a remote machine with a check request and sends the
 	// result through given result channel.
-	dialCheck := func(ch chan<- remoteResult, addr string, r map[string]*dnode.Partial) {
-		result, err := dial(addr, checkerName, r)
+	dialCheck := func(ch chan<- RemoteCheckResult, addr string, r map[string]*dnode.Partial) {
+		rawResult, err := dial(addr, checkerName, r)
+		results := make(map[string]CheckResult)
 
-		ch <- remoteResult{
-			addr:   addr,
-			result: result,
-			err:    err,
+		if err == nil {
+			err = rawResult.Unmarshal(&results)
+		}
+
+		ch <- RemoteCheckResult{
+			Address: addr,
+			Results: results,
+			Error:   err,
 		}
 		wg.Done()
 	}
@@ -68,13 +74,13 @@ func RemoteCheck(request *kite.Request) (interface{}, error) {
 
 	// Wait for response from all machines and then close the result channel in
 	// order to unblock the range over it below.
-	go func(ch chan remoteResult) {
+	go func(ch chan RemoteCheckResult) {
 		wg.Wait()
 		close(ch)
 	}(resultChan)
 
 	for result := range resultChan {
-		response[result.addr] = result.result
+		response[result.Address] = result
 	}
 
 	request.Context.Set("response", response)
