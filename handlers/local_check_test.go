@@ -16,9 +16,53 @@ import (
 const (
 	noErrorMsg     = "LocalCheck(\"%s\", \"%s\") is expected to return an error, got nil instead"
 	errorMsg       = "LocalCheck(\"%s\", \"%s\") is not expected to return an error, got \"%s\" instead"
-	unmarshalError = "LocalCheck(\"%s\", \"%s\") result unmarshal error: %#v"
+	unmarshalError = "LocalCheck(\"%s\", \"%s\") returned unmarshal error: %#v"
 	diffResult     = "LocalCheck(\"%s\", \"%s\") is expected to be %v, got %v instead"
 )
+
+var checksTable = []struct {
+	hasError bool
+	checker  string
+	checks   CheckRequest
+	result   CheckResult
+}{
+	{
+		false,
+		"native",
+		CheckRequest{Path: "./native.go", Type: "file_exists"},
+		CheckResult{true, nil},
+	},
+	{
+		false,
+		"unix",
+		CheckRequest{Path: "./native.go", Type: "file_exists"},
+		CheckResult{true, nil},
+	},
+	{
+		false,
+		"native",
+		CheckRequest{Path: "./native.go", Type: "file_contains", Substr: "func"},
+		CheckResult{true, nil},
+	},
+	{
+		false,
+		"native",
+		CheckRequest{Name: "go", Type: "process_is_running"},
+		CheckResult{true, nil},
+	},
+	{
+		false,
+		"native",
+		CheckRequest{Name: "go", Type: "foo"},
+		CheckResult{false, NoSuchCheckType},
+	},
+	{
+		true,
+		"imaginary",
+		CheckRequest{Path: "./native.go", Type: "file_exists"},
+		CheckResult{},
+	},
+}
 
 func mockCheckers() map[string]checks.Checker {
 	orig := make(map[string]checks.Checker)
@@ -62,51 +106,7 @@ func TestLocalCheck(t *testing.T) {
 	orig := mockCheckers()
 	defer unmockCheckers(orig)
 
-	argsTable := []struct {
-		hasError bool
-		checker  string
-		checks   CheckRequest
-		result   CheckResult
-	}{
-		{
-			false,
-			"native",
-			CheckRequest{Path: "./native.go", Type: "file_exists"},
-			CheckResult{true, nil},
-		},
-		{
-			false,
-			"unix",
-			CheckRequest{Path: "./native.go", Type: "file_exists"},
-			CheckResult{true, nil},
-		},
-		{
-			false,
-			"native",
-			CheckRequest{Path: "./native.go", Type: "file_contains", Substr: "func"},
-			CheckResult{true, nil},
-		},
-		{
-			false,
-			"native",
-			CheckRequest{Name: "go", Type: "process_is_running"},
-			CheckResult{true, nil},
-		},
-		{
-			false,
-			"native",
-			CheckRequest{Name: "go", Type: "foo"},
-			CheckResult{false, NoSuchCheckType},
-		},
-		{
-			true,
-			"imaginary",
-			CheckRequest{Path: "./native.go", Type: "file_exists"},
-			CheckResult{},
-		},
-	}
-
-	for i, arg := range argsTable {
+	for i, arg := range checksTable {
 		var (
 			result    map[string]CheckResult
 			ok        bool
@@ -131,7 +131,9 @@ func TestLocalCheck(t *testing.T) {
 			continue
 		}
 
-		if rawResult == nil {
+		if rawResult == nil && err != nil {
+			// We confirmed the error is correct and there's no need to
+			// unmarshal and check nils.
 			continue
 		}
 

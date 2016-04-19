@@ -60,64 +60,49 @@ func TestRemoteCheck(t *testing.T) {
 	final := runLocalKite()
 	defer close(final)
 
-	argsTable := []struct {
-		hasError bool
-		checker  string
-		checks   CheckRequest
-		result   CheckResult
-	}{
-		{
-			false,
-			"native",
-			CheckRequest{Path: "./native.go", Type: "file_exists"},
-			CheckResult{true, nil},
-		},
-	}
-
-	for i, arg := range argsTable {
+	for i, arg := range checksTable {
 		var (
-			remoteResult map[string]*dnode.Partial
-			result       map[string]CheckResult
-			ok           bool
-			checkName    = fmt.Sprintf("check_%d", i)
-			checks       = map[string]CheckRequest{checkName: arg.checks}
-			expResult    = map[string]CheckResult{checkName: arg.result}
+			results   map[string]RemoteCheckResult
+			ok        bool
+			checkName = fmt.Sprintf("check_%d", i)
+			checks    = map[string]CheckRequest{checkName: arg.checks}
+			expResult = map[string]CheckResult{checkName: arg.result}
 		)
 
-		rawArgs, _ := json.Marshal([]interface{}{[]string{"localhost:6666"}, arg.checker, checks})
+		rawArgs, _ := json.Marshal([]interface{}{
+			[]string{"localhost:6666"}, arg.checker, checks})
 
 		rawResult, err := RemoteCheck(&kite.Request{
 			Args:      &dnode.Partial{Raw: rawArgs},
 			LocalKite: kite.New("test", "0.0.0"),
 			Context:   cache.NewLRU(2),
 		})
-
-		if arg.hasError && err == nil {
-			t.Errorf(noErrorMsg, arg.checker, checks)
-			continue
-		} else if !arg.hasError && err != nil {
-			t.Errorf(errorMsg, arg.checker, checks, err.Error())
-			continue
+		if err != nil {
+			t.Errorf(errorMsg, arg.checker, checks, err)
 		}
 
-		if rawResult == nil {
-			continue
-		}
-
-		remoteResult, ok = rawResult.(map[string]*dnode.Partial)
+		results, ok = rawResult.(map[string]RemoteCheckResult)
 		if !ok {
 			t.Errorf(unmarshalError, arg.checker, checks, rawResult)
-			continue
 		}
 
-		for _, rResult := range remoteResult {
-			err := rResult.Unmarshal(&result)
-			if err != nil {
-				t.Errorf(unmarshalError, arg.checker, checks, rResult)
+		for _, result := range results {
+			if arg.hasError && result.Error == nil {
+				t.Errorf(noErrorMsg, arg.checker, checks)
+				continue
+			} else if !arg.hasError && result.Error != nil {
+				t.Errorf(errorMsg, arg.checker, checks, result.Error)
+				continue
 			}
 
-			if !reflect.DeepEqual(result, expResult) {
-				t.Errorf(diffResult, arg.checker, checks, result, expResult)
+			if result.Error != nil {
+				// We confirmed the error is correct and there's no need to
+				// unmarshal and check nils.
+				continue
+			}
+
+			if !reflect.DeepEqual(result.Results, expResult) {
+				t.Errorf(diffResult, arg.checker, checks, result.Results, expResult)
 			}
 		}
 
