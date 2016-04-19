@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
 	"github.com/koding/kite"
 	"github.com/koding/kite/dnode"
 
@@ -29,6 +31,31 @@ type CheckRequest struct {
 type CheckResult struct {
 	Result bool  `json:"result"`
 	Error  error `json:"error"`
+}
+
+type unmarshalbleCheckResult struct {
+	Result bool   `json:"result"`
+	Error  string `json:"error"`
+}
+
+// UnmarshalJSON is needed in order to unmarshal the error value from string.
+func (cr *CheckResult) UnmarshalJSON(data []byte) error {
+	ucr := unmarshalbleCheckResult{}
+	err := json.Unmarshal(data, &ucr)
+	cr.Result = ucr.Result
+	if ucr.Error != "" {
+		switch ucr.Error {
+		case NoSuchChecker.Error():
+			cr.Error = NoSuchChecker
+		case NoSuchCheckType.Error():
+			cr.Error = NoSuchCheckType
+		case InvalidRemoteResponse.Error():
+			cr.Error = InvalidRemoteResponse
+		default:
+			cr.Error = errors.New(ucr.Error)
+		}
+	}
+	return err
 }
 
 // LocalCheck performs given checks with a selected checker.
